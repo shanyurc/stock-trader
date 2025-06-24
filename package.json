@@ -1,7 +1,7 @@
 {
   "name": "stock-trader",
   "version": "0.1.0",
-  "description": "股票交易记录与提醒软件",
+  "description": "股票交易记录与提醒工具，支持自动计算买卖目标价格，监控股价并提醒。",
   "type": "module",
   "scripts": {
     "dev": "vite",

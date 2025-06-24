@@ -3,6 +3,8 @@ import { Trade, PriceCalculation, Settings as SettingsType } from "./types";
 import { TradeForm } from "./components/TradeForm";
 import { TradeList } from "./components/TradeList";
 import { Settings } from "./components/Settings";
+import { PortfolioAnalysis } from "./components/PortfolioAnalysis";
+import { PriceAlerts } from "./components/PriceAlerts";
 import { useTauri } from "./hooks/useTauri";
 import { PriceCalculator } from "./utils/priceCalculator";
 import "./App.css";
@@ -25,6 +27,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'trades' | 'analysis' | 'alerts'>('trades');
 
   // 数据加载
   useEffect(() => {
@@ -185,7 +188,7 @@ function App() {
   return (
     <div className="container">
       <header className="app-header">
-        <h1>trader</h1>
+        <h1>股票交易记录</h1>
         <div className="header-actions">
           <button
             onClick={() => setShowTradeForm(true)}
@@ -202,14 +205,54 @@ function App() {
         </div>
       </header>
 
+      {/* 标签页导航 */}
+      <nav className="tab-navigation">
+        <button
+          className={`tab-button ${activeTab === 'trades' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trades')}
+        >
+          📊 交易记录
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analysis')}
+        >
+          📈 投资组合分析
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'alerts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('alerts')}
+        >
+          🔔 价格提醒
+        </button>
+      </nav>
+
       <main className="app-main">
-        <TradeList
-          trades={trades}
-          priceCalculations={priceCalculations}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteTrade}
-          onCalculatePrice={handleCalculatePrice}
-        />
+        {activeTab === 'trades' && (
+          <TradeList
+            trades={trades}
+            priceCalculations={priceCalculations}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteTrade}
+            onCalculatePrice={handleCalculatePrice}
+          />
+        )}
+
+        {activeTab === 'analysis' && (
+          <PortfolioAnalysis
+            trades={trades}
+            settings={settings}
+            onRefresh={loadTrades}
+          />
+        )}
+
+        {activeTab === 'alerts' && (
+          <PriceAlerts
+            trades={trades}
+            settings={settings}
+            onTradeClick={handleEditClick}
+          />
+        )}
       </main>
 
       {showTradeForm && (
