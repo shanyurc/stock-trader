@@ -168,6 +168,9 @@ export class PriceCalculator {
    * @returns 格式化后的价格字符串
    */
   static formatPrice(price: number, currency: string = '¥'): string {
+    if (typeof price !== 'number' || isNaN(price)) {
+      return `${currency}--`;
+    }
     return `${currency}${price.toFixed(2)}`;
   }
 
@@ -179,6 +182,9 @@ export class PriceCalculator {
    * @returns 格式化后的百分比字符串
    */
   static formatPercentage(rate: number, decimals: number = 2): string {
+    if (typeof rate !== 'number' || isNaN(rate)) {
+      return '--%';
+    }
     return `${(rate * 100).toFixed(decimals)}%`;
   }
 

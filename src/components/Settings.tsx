@@ -55,7 +55,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 min="0"
                 max="100"
               />
-              <small>当前设置: {(formData.buyStepPercentage * 100).toFixed(1)}%</small>
+              <small>当前设置: {typeof formData.buyStepPercentage === 'number' ? (formData.buyStepPercentage * 100).toFixed(1) : '--'}%</small>
             </div>
 
             <div className="form-group">
@@ -73,7 +73,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 min="0"
                 max="1000"
               />
-              <small>当前设置: {(formData.annualReturnRate * 100).toFixed(1)}%</small>
+              <small>当前设置: {typeof formData.annualReturnRate === 'number' ? (formData.annualReturnRate * 100).toFixed(1) : '--'}%</small>
             </div>
           </div>
 

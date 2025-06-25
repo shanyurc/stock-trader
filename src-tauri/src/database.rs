@@ -2,7 +2,7 @@ use sqlx::{sqlite::SqlitePool, Row};
 use anyhow::Result;
 use std::path::PathBuf;
 use tauri::api::path::app_data_dir;
-use crate::models::{Trade, Stock, Settings};
+use crate::models::Trade;
 
 pub struct Database {
     pool: SqlitePool,
@@ -10,16 +10,51 @@ pub struct Database {
 
 impl Database {
     pub async fn new() -> Result<Self> {
-        let app_data_path = app_data_dir(&tauri::Config::default())
-            .unwrap_or_else(|| PathBuf::from("."));
-        
-        std::fs::create_dir_all(&app_data_path)?;
-        
-        let db_path = app_data_path.join("stock_trader.db");
+        // 首先尝试使用当前目录，这样更简单可靠
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let db_path = current_dir.join("stock_trader.db");
         let database_url = format!("sqlite:{}", db_path.display());
-        
-        let pool = SqlitePool::connect(&database_url).await?;
-        
+
+        println!("尝试连接数据库: {}", database_url);
+
+        match SqlitePool::connect(&database_url).await {
+            Ok(pool) => {
+                println!("数据库连接成功");
+                return Ok(Database { pool });
+            }
+            Err(e) => {
+                println!("当前目录数据库连接失败: {}, 尝试应用数据目录", e);
+            }
+        }
+
+        // 如果当前目录失败，尝试应用数据目录
+        if let Some(mut app_data_path) = app_data_dir(&tauri::Config::default()) {
+            app_data_path = app_data_path.join("stock-trader");
+            println!("尝试应用数据目录: {:?}", app_data_path);
+
+            if let Ok(_) = std::fs::create_dir_all(&app_data_path) {
+                let db_path = app_data_path.join("stock_trader.db");
+                let database_url = format!("sqlite:{}", db_path.display());
+                println!("连接应用数据目录数据库: {}", database_url);
+
+                match SqlitePool::connect(&database_url).await {
+                    Ok(pool) => {
+                        println!("应用数据目录数据库连接成功");
+                        return Ok(Database { pool });
+                    }
+                    Err(e) => {
+                        println!("应用数据目录数据库连接失败: {}", e);
+                    }
+                }
+            }
+        }
+
+        // 最后尝试内存数据库
+        println!("尝试使用内存数据库");
+        let database_url = "sqlite::memory:";
+        let pool = SqlitePool::connect(database_url).await?;
+        println!("内存数据库连接成功");
+
         Ok(Database { pool })
     }
 
@@ -157,34 +192,7 @@ impl Database {
         Ok(())
     }
 
-    // 股票信息操作
-    pub async fn upsert_stock(&self, stock: &Stock) -> Result<()> {
-        sqlx::query(
-            r#"
-            INSERT OR REPLACE INTO stocks (code, name, current_price, last_updated)
-            VALUES (?, ?, ?, ?)
-            "#,
-        )
-        .bind(&stock.code)
-        .bind(&stock.name)
-        .bind(stock.current_price)
-        .bind(stock.last_updated)
-        .execute(&self.pool)
-        .await?;
 
-        Ok(())
-    }
-
-    pub async fn get_stock(&self, code: &str) -> Result<Option<Stock>> {
-        let stock = sqlx::query_as::<_, Stock>(
-            "SELECT code, name, current_price, last_updated FROM stocks WHERE code = ?"
-        )
-        .bind(code)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(stock)
-    }
 
     // 配置操作
     pub async fn get_setting(&self, key: &str) -> Result<Option<String>> {
@@ -210,14 +218,32 @@ impl Database {
 static mut DATABASE: Option<Database> = None;
 
 pub async fn init_database() -> Result<()> {
-    let db = Database::new().await?;
-    db.init_tables().await?;
-    
-    unsafe {
-        DATABASE = Some(db);
+    println!("开始初始化数据库...");
+
+    match Database::new().await {
+        Ok(db) => {
+            println!("数据库连接成功");
+
+            match db.init_tables().await {
+                Ok(_) => {
+                    println!("数据库表初始化成功");
+                    unsafe {
+                        DATABASE = Some(db);
+                    }
+                    println!("数据库初始化完成");
+                    Ok(())
+                }
+                Err(e) => {
+                    println!("数据库表初始化失败: {}", e);
+                    Err(e)
+                }
+            }
+        }
+        Err(e) => {
+            println!("数据库连接失败: {}", e);
+            Err(e)
+        }
     }
-    
-    Ok(())
 }
 
 pub fn get_database() -> &'static Database {

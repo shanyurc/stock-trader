@@ -1,8 +1,9 @@
 use tauri::command;
 use crate::database::get_database;
-use crate::models::{Trade, Stock, PriceCalculation};
-use crate::api::{StockApi, PriceCalculator};
-use chrono::{Utc, DateTime};
+use crate::models::{Trade, PriceCalculation};
+use crate::api::PriceCalculator;
+use crate::stock_api::StockApi;
+use chrono::Utc;
 use anyhow::Result;
 
 #[command]
@@ -39,16 +40,24 @@ pub async fn delete_trade(id: i64) -> Result<(), String> {
 
 #[command]
 pub async fn get_stock_price(stock_code: String) -> Result<crate::models::StockPriceResponse, String> {
-    StockApi::get_stock_price(&stock_code)
-        .await
-        .map_err(|e| e.to_string())
+    match StockApi::get_stock_info(&stock_code).await {
+        Ok(stock_info) => {
+            Ok(crate::models::StockPriceResponse {
+                code: stock_info.code,
+                name: stock_info.name,
+                price: stock_info.current_price,
+                change: stock_info.change,
+                change_percent: stock_info.change_percent,
+                timestamp: stock_info.timestamp,
+            })
+        }
+        Err(e) => Err(e.to_string())
+    }
 }
 
 #[command]
 pub async fn validate_stock_code(stock_code: String) -> Result<bool, String> {
-    StockApi::validate_stock_code(&stock_code)
-        .await
-        .map_err(|e| e.to_string())
+    Ok(StockApi::validate_stock_code(&stock_code))
 }
 
 #[command]
@@ -83,7 +92,7 @@ pub async fn calculate_price_targets(
     
     // 获取当前股价
     let current_price = match StockApi::get_stock_price(&trade.stock_code).await {
-        Ok(response) => Some(response.price),
+        Ok(price) => Some(price),
         Err(_) => None,
     };
     
@@ -115,6 +124,20 @@ pub async fn get_setting(key: String) -> Result<Option<String>, String> {
 pub async fn set_setting(key: String, value: String) -> Result<(), String> {
     get_database()
         .set_setting(&key, &value)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn search_stocks(query: String) -> Result<Vec<crate::models::StockSearchResult>, String> {
+    StockApi::search_stocks(&query)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn get_stock_info(stock_code: String) -> Result<crate::models::StockInfo, String> {
+    StockApi::get_stock_info(&stock_code)
         .await
         .map_err(|e| e.to_string())
 }

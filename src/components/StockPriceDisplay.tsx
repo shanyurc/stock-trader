@@ -38,7 +38,7 @@ export const StockPriceDisplay: React.FC<StockPriceDisplayProps> = ({
       setLastUpdateTime(new Date());
       
       // 通知父组件价格更新
-      if (onPriceUpdate) {
+      if (onPriceUpdate && typeof info.currentPrice === 'number' && !isNaN(info.currentPrice)) {
         onPriceUpdate(info.currentPrice);
       }
     } catch (err) {
@@ -82,11 +82,17 @@ export const StockPriceDisplay: React.FC<StockPriceDisplayProps> = ({
 
   // 格式化价格
   const formatPrice = (price: number) => {
+    if (typeof price !== 'number' || isNaN(price)) {
+      return '¥--';
+    }
     return `¥${price.toFixed(2)}`;
   };
 
   // 格式化变化
   const formatChange = (change: number, changePercent: number) => {
+    if (typeof change !== 'number' || isNaN(change) || typeof changePercent !== 'number' || isNaN(changePercent)) {
+      return '--';
+    }
     const changeStr = change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
     const percentStr = changePercent >= 0 ? `+${changePercent.toFixed(2)}%` : `${changePercent.toFixed(2)}%`;
     return `${changeStr} (${percentStr})`;
@@ -144,11 +150,11 @@ export const StockPriceDisplay: React.FC<StockPriceDisplayProps> = ({
     );
   }
 
-  if (!stockInfo) {
+  if (!stockInfo || typeof stockInfo.currentPrice !== 'number') {
     return (
       <div className="stock-price-display empty">
         <p>暂无股价数据</p>
-        <button 
+        <button
           onClick={handleManualRefresh}
           className="btn-small"
         >

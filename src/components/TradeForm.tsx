@@ -67,30 +67,48 @@ export const TradeForm: React.FC<TradeFormProps> = ({
 
   // 处理股票选择
   const handleStockSelect = (stock: StockSearchResult) => {
-    setFormData(prev => ({
-      ...prev,
-      stockCode: stock.code,
-      stockName: stock.name,
-    }));
+    console.log('选择股票:', stock);
+    try {
+      setFormData(prev => ({
+        ...prev,
+        stockCode: stock.code,
+        stockName: stock.name,
+      }));
+      console.log('股票选择成功');
+    } catch (error) {
+      console.error('股票选择失败:', error);
+    }
   };
 
   // 处理股价更新
   const handlePriceUpdate = (price: number) => {
-    setCurrentPrice(price);
+    console.log('股价更新:', price, typeof price);
+    try {
+      // 验证价格是有效数字
+      if (typeof price !== 'number' || isNaN(price) || price < 0) {
+        console.error('无效的价格值:', price);
+        return;
+      }
 
-    // 如果买入价格为0或者是自动填充的，则自动更新
-    if (formData.buyPrice === 0 || priceAutoFilled) {
-      setFormData(prev => ({
-        ...prev,
-        buyPrice: price,
-      }));
-      setPriceAutoFilled(true);
+      setCurrentPrice(price);
+
+      // 如果买入价格为0或者是自动填充的，则自动更新
+      if (formData.buyPrice === 0 || priceAutoFilled) {
+        setFormData(prev => ({
+          ...prev,
+          buyPrice: price,
+        }));
+        setPriceAutoFilled(true);
+      }
+      console.log('股价更新成功');
+    } catch (error) {
+      console.error('股价更新失败:', error);
     }
   };
 
   // 手动使用当前价格
   const handleUseCurrentPrice = () => {
-    if (currentPrice !== null) {
+    if (currentPrice !== null && currentPrice !== undefined && typeof currentPrice === 'number') {
       setFormData(prev => ({
         ...prev,
         buyPrice: currentPrice,
@@ -101,7 +119,7 @@ export const TradeForm: React.FC<TradeFormProps> = ({
 
   // 计算价格差异
   const getPriceDifference = () => {
-    if (currentPrice === null || formData.buyPrice === 0) return null;
+    if (currentPrice === null || currentPrice === undefined || formData.buyPrice === 0) return null;
 
     const diff = formData.buyPrice - currentPrice;
     const diffPercent = (diff / currentPrice) * 100;
@@ -164,7 +182,7 @@ export const TradeForm: React.FC<TradeFormProps> = ({
               required
               className={priceAutoFilled ? 'auto-filled' : ''}
             />
-            {currentPrice !== null && (
+            {currentPrice !== null && currentPrice !== undefined && (
               <button
                 type="button"
                 onClick={handleUseCurrentPrice}
@@ -177,7 +195,7 @@ export const TradeForm: React.FC<TradeFormProps> = ({
           </div>
 
           {/* 价格差异提示 */}
-          {priceDiff && (
+          {priceDiff && priceDiff.amount !== undefined && priceDiff.percent !== undefined && (
             <div className={`price-difference ${priceDiff.isHigher ? 'higher' : 'lower'}`}>
               {priceDiff.isHigher ? '高于' : '低于'}当前价格
               ¥{Math.abs(priceDiff.amount).toFixed(2)}

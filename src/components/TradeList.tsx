@@ -19,6 +19,9 @@ export const TradeList: React.FC<TradeListProps> = ({
   onCalculatePrice,
 }) => {
   const formatCurrency = (amount: number) => {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return '¥--';
+    }
     return `¥${amount.toFixed(2)}`;
   };
 

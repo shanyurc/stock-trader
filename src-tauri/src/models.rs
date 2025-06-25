@@ -45,3 +45,27 @@ pub struct StockPriceResponse {
     pub change_percent: f64,
     pub timestamp: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StockSearchResult {
+    pub code: String,
+    pub name: String,
+    pub market: String,
+    #[serde(rename = "type")]
+    pub stock_type: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StockInfo {
+    pub code: String,
+    pub name: String,
+    pub current_price: f64,
+    pub change: f64,
+    pub change_percent: f64,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub volume: i64,
+    pub turnover: i64,
+    pub timestamp: DateTime<Utc>,
+}

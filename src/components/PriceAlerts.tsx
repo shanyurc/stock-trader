@@ -70,6 +70,9 @@ export const PriceAlerts: React.FC<PriceAlertsProps> = ({
   }, [trades, settings]);
 
   const formatCurrency = (amount: number) => {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return '¥--';
+    }
     return `¥${amount.toFixed(2)}`;
   };
 

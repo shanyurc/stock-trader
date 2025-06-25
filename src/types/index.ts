@@ -64,7 +64,7 @@ export interface StockSearchResult {
   code: string;
   name: string;
   market: string; // 市场类型：SH、SZ等
-  type: string;   // 股票类型
+  stock_type?: string;   // 股票类型，可选
 }
 
 // 股票详细信息类型

@@ -70,6 +70,9 @@ export const PortfolioAnalysis: React.FC<PortfolioAnalysisProps> = ({
   };
 
   const formatPercent = (percent: number) => {
+    if (typeof percent !== 'number' || isNaN(percent)) {
+      return '--%';
+    }
     const sign = percent >= 0 ? '+' : '';
     return `${sign}${percent.toFixed(2)}%`;
   };

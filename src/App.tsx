@@ -5,6 +5,8 @@ import { TradeList } from "./components/TradeList";
 import { Settings } from "./components/Settings";
 import { PortfolioAnalysis } from "./components/PortfolioAnalysis";
 import { PriceAlerts } from "./components/PriceAlerts";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { StockSelectTest } from "./components/StockSelectTest";
 import { useTauri } from "./hooks/useTauri";
 import { PriceCalculator } from "./utils/priceCalculator";
 import "./App.css";
@@ -25,6 +27,7 @@ function App() {
   });
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTestMode, setShowTestMode] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'trades' | 'analysis' | 'alerts'>('trades');
@@ -60,16 +63,25 @@ function App() {
 
   const handleAddTrade = async (tradeData: Omit<Trade, 'id' | 'createdAt'>) => {
     try {
-      // 这里将来会调用 Tauri 命令
-      // const id = await invoke<number>("create_trade", { trade: tradeData });
-
-      // 暂时使用模拟数据
-      const newTrade: Trade = {
-        ...tradeData,
-        id: Date.now(),
-        createdAt: new Date(),
-      };
-      setTrades(prev => [newTrade, ...prev]);
+      if (tauri.isTauri) {
+        // 使用 Tauri 命令保存到数据库
+        const tradeToSave = {
+          ...tradeData,
+          id: undefined, // 让数据库自动生成ID
+          createdAt: new Date(),
+        };
+        await tauri.createTrade(tradeToSave);
+        // 重新加载数据以获取最新的交易记录
+        await loadTrades();
+      } else {
+        // 网页版使用模拟数据
+        const newTrade: Trade = {
+          ...tradeData,
+          id: Date.now(),
+          createdAt: new Date(),
+        };
+        setTrades(prev => [newTrade, ...prev]);
+      }
       setShowTradeForm(false);
     } catch (error) {
       console.error("添加交易记录失败:", error);
@@ -80,15 +92,23 @@ function App() {
     if (!editingTrade) return;
 
     try {
-      // 这里将来会调用 Tauri 命令
-      // await invoke("update_trade", { trade: { ...tradeData, id: editingTrade.id } });
-
-      // 暂时使用模拟数据
-      setTrades(prev => prev.map(trade =>
-        trade.id === editingTrade.id
-          ? { ...trade, ...tradeData }
-          : trade
-      ));
+      if (tauri.isTauri) {
+        // 使用 Tauri 命令更新数据库
+        const updatedTrade = {
+          ...editingTrade,
+          ...tradeData
+        };
+        await tauri.updateTrade(updatedTrade);
+        // 重新加载数据
+        await loadTrades();
+      } else {
+        // 网页版使用模拟数据
+        setTrades(prev => prev.map(trade =>
+          trade.id === editingTrade.id
+            ? { ...trade, ...tradeData }
+            : trade
+        ));
+      }
       setEditingTrade(null);
       setShowTradeForm(false);
     } catch (error) {
@@ -100,11 +120,15 @@ function App() {
     if (!confirm("确定要删除这条交易记录吗？")) return;
 
     try {
-      // 这里将来会调用 Tauri 命令
-      // await invoke("delete_trade", { id });
-
-      // 暂时使用模拟数据
-      setTrades(prev => prev.filter(trade => trade.id !== id));
+      if (tauri.isTauri) {
+        // 使用 Tauri 命令删除
+        await tauri.deleteTrade(id);
+        // 重新加载数据
+        await loadTrades();
+      } else {
+        // 网页版使用模拟数据
+        setTrades(prev => prev.filter(trade => trade.id !== id));
+      }
       setPriceCalculations(prev => {
         const newCalc = { ...prev };
         delete newCalc[id];
@@ -202,6 +226,13 @@ function App() {
           >
             设置
           </button>
+          <button
+            onClick={() => setShowTestMode(true)}
+            className="btn-secondary"
+            style={{ backgroundColor: '#ff6b6b' }}
+          >
+            测试模式
+          </button>
         </div>
       </header>
 
@@ -258,11 +289,13 @@ function App() {
       {showTradeForm && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <TradeForm
-              onSubmit={editingTrade ? handleEditTrade : handleAddTrade}
-              initialData={editingTrade || undefined}
-              onCancel={handleCancelForm}
-            />
+            <ErrorBoundary>
+              <TradeForm
+                onSubmit={editingTrade ? handleEditTrade : handleAddTrade}
+                initialData={editingTrade || undefined}
+                onCancel={handleCancelForm}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       )}
@@ -273,6 +306,31 @@ function App() {
           onSave={handleSaveSettings}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {showTestMode && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>股票选择功能测试</h2>
+              <button
+                onClick={() => setShowTestMode(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <ErrorBoundary>
+              <StockSelectTest />
+            </ErrorBoundary>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,8 +5,9 @@ mod database;
 mod api;
 mod models;
 mod commands;
+mod stock_api;
 
-use tauri::Manager;
+
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -24,13 +25,14 @@ fn main() {
             commands::delete_trade,
             commands::get_stock_price,
             commands::validate_stock_code,
+            commands::search_stocks,
+            commands::get_stock_info,
             commands::calculate_price_targets,
             commands::get_setting,
             commands::set_setting
         ])
-        .setup(|app| {
+        .setup(|_app| {
             // 初始化数据库
-            let app_handle = app.handle();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = database::init_database().await {
                     eprintln!("数据库初始化失败: {}", e);
