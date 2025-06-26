@@ -16,7 +16,6 @@ export const PortfolioAnalysis: React.FC<PortfolioAnalysisProps> = ({
 }) => {
   const [analysis, setAnalysis] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
   
   const tauri = useTauri();
   const calculationService = new PriceCalculationService(settings);
@@ -46,7 +45,7 @@ export const PortfolioAnalysis: React.FC<PortfolioAnalysisProps> = ({
         prices[code] = price;
       });
       
-      setCurrentPrices(prices);
+
       
       // 计算分析结果
       const portfolioAnalysis = calculationService.analyzePortfolio(trades, prices);

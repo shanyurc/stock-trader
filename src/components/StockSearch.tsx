@@ -26,7 +26,7 @@ export const StockSearch: React.FC<StockSearchProps> = ({
   const tauri = useTauri();
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<number>();
 
   // 同步外部 value 变化
   useEffect(() => {

@@ -7,9 +7,14 @@ pub struct StockApi;
 impl StockApi {
     /// 从新浪财经API获取股价
     pub async fn get_stock_price(stock_code: &str) -> Result<StockPriceResponse> {
-        let url = format!("http://hq.sinajs.cn/list={}", stock_code);
-        
-        let response = reqwest::get(&url).await?;
+        let url = format!("https://hq.sinajs.cn/list={}", stock_code);
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .build()?;
+
+        let response = client.get(&url).send().await?;
         let text = response.text().await?;
         
         // 解析新浪财经返回的数据
@@ -67,7 +72,7 @@ impl PriceCalculator {
         days_held: i64,
     ) -> f64 {
         let effective_days = days_held.max(30) as f64;
-        buy_price * (1.0 + annual_return_rate / 360.0) * effective_days
+        buy_price * (1.0 + (annual_return_rate / 360.0) * effective_days)
     }
     
     /// 计算买入目标价格

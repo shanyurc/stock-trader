@@ -98,113 +98,40 @@ export const useTauri = () => {
   // 股票搜索功能
   const searchStocks = async (query: string): Promise<StockSearchResult[]> => {
     if (!isTauri()) {
-      // 模拟搜索数据
-      const mockStocks = [
-        { code: '000001', name: '平安银行', market: 'SZ', stock_type: '股票' },
-        { code: '000002', name: '万科A', market: 'SZ', stock_type: '股票' },
-        { code: '600036', name: '招商银行', market: 'SH', stock_type: '股票' },
-        { code: '000858', name: '五粮液', market: 'SZ', stock_type: '股票' },
-        { code: '600519', name: '贵州茅台', market: 'SH', stock_type: '股票' },
-        { code: '000858', name: '五粮液', market: 'SZ', stock_type: '股票' },
-        { code: '002415', name: '海康威视', market: 'SZ', stock_type: '股票' },
-        { code: '600276', name: '恒瑞医药', market: 'SH', stock_type: '股票' },
-      ];
-
-      const filtered = mockStocks.filter(stock =>
-        stock.code.includes(query) ||
-        stock.name.includes(query)
-      ).slice(0, 10); // 限制返回10个结果
-
-      return Promise.resolve(filtered);
+      // 在网页模式下也尝试调用真实API
+      try {
+        return await fetchRealStockSearch(query);
+      } catch (error) {
+        console.error('真实API搜索失败，使用模拟数据:', error);
+        return getMockStockSearch(query);
+      }
     }
     try {
       return await invoke<StockSearchResult[]>('search_stocks', { query });
     } catch (error) {
       console.error('搜索股票失败:', error);
       // 如果Tauri命令失败，返回模拟数据作为后备
-      const mockStocks = [
-        { code: '000001', name: '平安银行', market: 'SZ', stock_type: '股票' },
-        { code: '000002', name: '万科A', market: 'SZ', stock_type: '股票' },
-        { code: '600036', name: '招商银行', market: 'SH', stock_type: '股票' },
-        { code: '000858', name: '五粮液', market: 'SZ', stock_type: '股票' },
-        { code: '600519', name: '贵州茅台', market: 'SH', stock_type: '股票' },
-      ];
-      return mockStocks.filter(stock =>
-        stock.code.includes(query) || stock.name.includes(query)
-      ).slice(0, 10);
+      return getMockStockSearch(query);
     }
   };
 
   // 获取股票详细信息
   const getStockInfo = async (stockCode: string): Promise<StockInfo> => {
     if (!isTauri()) {
-      // 模拟详细数据
-      const mockStocks: Record<string, any> = {
-        '000001': { name: '平安银行', price: 12.50, open: 12.30, high: 12.80, low: 12.20 },
-        '000002': { name: '万科A', price: 8.80, open: 8.75, high: 8.95, low: 8.70 },
-        '600036': { name: '招商银行', price: 35.20, open: 35.00, high: 35.50, low: 34.80 },
-        '000858': { name: '五粮液', price: 128.50, open: 127.80, high: 129.20, low: 127.50 },
-        '600519': { name: '贵州茅台', price: 1680.00, open: 1675.00, high: 1690.00, low: 1670.00 },
-      };
-
-      const stock = mockStocks[stockCode] || {
-        name: '未知股票',
-        price: 10.0 + Math.random() * 5,
-        open: 10.0,
-        high: 11.0,
-        low: 9.5
-      };
-
-      const change = -0.5 + Math.random();
-
-      return Promise.resolve({
-        code: stockCode,
-        name: stock.name,
-        currentPrice: stock.price,
-        change: change,
-        changePercent: (change / stock.price) * 100,
-        open: stock.open,
-        high: stock.high,
-        low: stock.low,
-        volume: Math.floor(Math.random() * 1000000),
-        turnover: Math.floor(Math.random() * 100000000),
-        timestamp: new Date(),
-      });
+      // 在网页模式下也尝试调用真实API
+      try {
+        return await fetchRealStockInfo(stockCode);
+      } catch (error) {
+        console.error('真实API获取股票信息失败，使用模拟数据:', error);
+        return getMockStockInfo(stockCode);
+      }
     }
     try {
       return await invoke<StockInfo>('get_stock_info', { stockCode });
     } catch (error) {
       console.error('获取股票信息失败:', error);
       // 如果Tauri命令失败，返回模拟数据作为后备
-      const mockStocks: Record<string, any> = {
-        '000001': { name: '平安银行', price: 12.50, open: 12.30, high: 12.80, low: 12.20 },
-        '000002': { name: '万科A', price: 8.80, open: 8.75, high: 8.95, low: 8.70 },
-        '600036': { name: '招商银行', price: 35.20, open: 35.00, high: 35.50, low: 34.80 },
-      };
-
-      const stock = mockStocks[stockCode] || {
-        name: '未知股票',
-        price: 10.0 + Math.random() * 5,
-        open: 10.0,
-        high: 11.0,
-        low: 9.5
-      };
-
-      const change = -0.5 + Math.random();
-
-      return {
-        code: stockCode,
-        name: stock.name,
-        currentPrice: stock.price,
-        change: change,
-        changePercent: (change / stock.price) * 100,
-        open: stock.open,
-        high: stock.high,
-        low: stock.low,
-        volume: Math.floor(Math.random() * 1000000),
-        turnover: Math.floor(Math.random() * 100000000),
-        timestamp: new Date(),
-      };
+      return getMockStockInfo(stockCode);
     }
   };
 
@@ -299,4 +226,168 @@ export const useTauri = () => {
     // 工具
     isTauri: isTauri(),
   };
+};
+
+// 真实API调用辅助函数（用于网页模式）
+
+// 从东方财富API搜索股票
+const fetchRealStockSearch = async (query: string): Promise<StockSearchResult[]> => {
+  const url = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(query)}&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&markettype=&mktnum=&jys=&classify=&securitytype=&status=&letter=`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const json = await response.json();
+  const results: StockSearchResult[] = [];
+
+  if (json.QuotationCodeTable?.Data) {
+    for (const item of json.QuotationCodeTable.Data.slice(0, 10)) {
+      if (item.Code && item.Name && item.MktNum) {
+        const market = item.MktNum === '1' ? 'SH' : item.MktNum === '2' ? 'SZ' : 'OTHER';
+        results.push({
+          code: item.Code,
+          name: item.Name,
+          market: market,
+          stock_type: '股票'
+        });
+      }
+    }
+  }
+
+  return results;
+};
+
+// 从新浪财经API获取真实股票信息
+const fetchRealStockInfo = async (stockCode: string): Promise<StockInfo> => {
+  const formattedCode = formatStockCodeForSina(stockCode);
+  const url = `https://hq.sinajs.cn/list=${formattedCode}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const text = await response.text();
+
+  // 解析新浪财经返回的数据
+  const dataStart = text.indexOf('"');
+  const dataEnd = text.lastIndexOf('"');
+
+  if (dataStart === -1 || dataEnd === -1) {
+    throw new Error('无法解析股票数据');
+  }
+
+  const data = text.substring(dataStart + 1, dataEnd);
+  const parts = data.split(',');
+
+  if (parts.length < 10) {
+    throw new Error('股票数据格式不正确');
+  }
+
+  const name = parts[0];
+  const open = parseFloat(parts[1]) || 0;
+  const prevClose = parseFloat(parts[2]) || 0;
+  const currentPrice = parseFloat(parts[3]) || 0;
+  const high = parseFloat(parts[4]) || 0;
+  const low = parseFloat(parts[5]) || 0;
+  const volume = parseInt(parts[8]) || 0;
+  const turnover = parseFloat(parts[9]) || 0;
+
+  const change = currentPrice - prevClose;
+  const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+
+  if (currentPrice <= 0 || !name) {
+    throw new Error('无效的股票数据');
+  }
+
+  return {
+    code: stockCode,
+    name,
+    currentPrice,
+    change,
+    changePercent,
+    open,
+    high,
+    low,
+    volume,
+    turnover,
+    timestamp: new Date(),
+  };
+};
+
+// 格式化股票代码为新浪财经API格式
+const formatStockCodeForSina = (stockCode: string): string => {
+  if (stockCode.startsWith('6')) {
+    return `sh${stockCode}`; // 上海交易所
+  } else if (stockCode.startsWith('0') || stockCode.startsWith('3')) {
+    return `sz${stockCode}`; // 深圳交易所
+  } else {
+    return `sh${stockCode}`; // 默认上海交易所
+  }
+};
+
+// 模拟股票信息数据
+const getMockStockInfo = (stockCode: string): StockInfo => {
+  const mockStocks: Record<string, any> = {
+    '000001': { name: '平安银行', price: 12.50, open: 12.30, high: 12.80, low: 12.20 },
+    '000002': { name: '万科A', price: 8.80, open: 8.75, high: 8.95, low: 8.70 },
+    '600036': { name: '招商银行', price: 35.20, open: 35.00, high: 35.50, low: 34.80 },
+    '000858': { name: '五粮液', price: 128.50, open: 127.80, high: 129.20, low: 127.50 },
+    '600519': { name: '贵州茅台', price: 1680.00, open: 1675.00, high: 1690.00, low: 1670.00 },
+  };
+
+  const stock = mockStocks[stockCode] || {
+    name: '未知股票',
+    price: 10.0 + Math.random() * 5,
+    open: 10.0,
+    high: 11.0,
+    low: 9.5
+  };
+
+  const change = -0.5 + Math.random();
+
+  return {
+    code: stockCode,
+    name: stock.name,
+    currentPrice: stock.price,
+    change: change,
+    changePercent: (change / stock.price) * 100,
+    open: stock.open,
+    high: stock.high,
+    low: stock.low,
+    volume: Math.floor(Math.random() * 1000000),
+    turnover: Math.floor(Math.random() * 100000000),
+    timestamp: new Date(),
+  };
+};
+
+// 模拟股票搜索数据
+const getMockStockSearch = (query: string): StockSearchResult[] => {
+  const mockStocks = [
+    { code: '000001', name: '平安银行', market: 'SZ', stock_type: '股票' },
+    { code: '000002', name: '万科A', market: 'SZ', stock_type: '股票' },
+    { code: '600036', name: '招商银行', market: 'SH', stock_type: '股票' },
+    { code: '000858', name: '五粮液', market: 'SZ', stock_type: '股票' },
+    { code: '600519', name: '贵州茅台', market: 'SH', stock_type: '股票' },
+    { code: '002415', name: '海康威视', market: 'SZ', stock_type: '股票' },
+    { code: '600276', name: '恒瑞医药', market: 'SH', stock_type: '股票' },
+  ];
+
+  return mockStocks.filter(stock =>
+    stock.code.includes(query) || stock.name.includes(query)
+  ).slice(0, 10);
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Trade, PriceCalculation, Settings as SettingsType } from "./types";
 import { TradeForm } from "./components/TradeForm";
 import { TradeList } from "./components/TradeList";
@@ -8,7 +8,6 @@ import { PriceAlerts } from "./components/PriceAlerts";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { StockSelectTest } from "./components/StockSelectTest";
 import { useTauri } from "./hooks/useTauri";
-import { PriceCalculator } from "./utils/priceCalculator";
 import "./App.css";
 
 function App() {

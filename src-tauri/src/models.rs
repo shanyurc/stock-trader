@@ -42,6 +42,7 @@ pub struct StockPriceResponse {
     pub name: String,
     pub price: f64,
     pub change: f64,
+    #[serde(rename = "changePercent")]
     pub change_percent: f64,
     pub timestamp: DateTime<Utc>,
 }
@@ -59,8 +60,10 @@ pub struct StockSearchResult {
 pub struct StockInfo {
     pub code: String,
     pub name: String,
+    #[serde(rename = "currentPrice")]
     pub current_price: f64,
     pub change: f64,
+    #[serde(rename = "changePercent")]
     pub change_percent: f64,
     pub open: f64,
     pub high: f64,

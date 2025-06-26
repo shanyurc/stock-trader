@@ -8,7 +8,9 @@ use anyhow::Result;
 
 #[command]
 pub async fn create_trade(trade: Trade) -> Result<i64, String> {
-    get_database()
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+    db_lock
         .create_trade(&trade)
         .await
         .map_err(|e| e.to_string())
@@ -16,7 +18,9 @@ pub async fn create_trade(trade: Trade) -> Result<i64, String> {
 
 #[command]
 pub async fn get_all_trades() -> Result<Vec<Trade>, String> {
-    get_database()
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+    db_lock
         .get_all_trades()
         .await
         .map_err(|e| e.to_string())
@@ -24,7 +28,9 @@ pub async fn get_all_trades() -> Result<Vec<Trade>, String> {
 
 #[command]
 pub async fn update_trade(trade: Trade) -> Result<(), String> {
-    get_database()
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+    db_lock
         .update_trade(&trade)
         .await
         .map_err(|e| e.to_string())
@@ -32,7 +38,9 @@ pub async fn update_trade(trade: Trade) -> Result<(), String> {
 
 #[command]
 pub async fn delete_trade(id: i64) -> Result<(), String> {
-    get_database()
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+    db_lock
         .delete_trade(id)
         .await
         .map_err(|e| e.to_string())
@@ -67,9 +75,10 @@ pub async fn calculate_price_targets(
     annual_return_rate: f64,
 ) -> Result<PriceCalculation, String> {
     let db = get_database();
-    
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+
     // 获取交易记录
-    let trades = db.get_all_trades().await.map_err(|e| e.to_string())?;
+    let trades = db_lock.get_all_trades().await.map_err(|e| e.to_string())?;
     let trade = trades
         .into_iter()
         .find(|t| t.id == Some(trade_id))
@@ -114,7 +123,9 @@ pub async fn calculate_price_targets(
 
 #[command]
 pub async fn get_setting(key: String) -> Result<Option<String>, String> {
-    get_database()
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+    db_lock
         .get_setting(&key)
         .await
         .map_err(|e| e.to_string())
@@ -122,7 +133,9 @@ pub async fn get_setting(key: String) -> Result<Option<String>, String> {
 
 #[command]
 pub async fn set_setting(key: String, value: String) -> Result<(), String> {
-    get_database()
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+    db_lock
         .set_setting(&key, &value)
         .await
         .map_err(|e| e.to_string())

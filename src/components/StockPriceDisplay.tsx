@@ -12,7 +12,6 @@ interface StockPriceDisplayProps {
 
 export const StockPriceDisplay: React.FC<StockPriceDisplayProps> = ({
   stockCode,
-  stockName,
   onPriceUpdate,
   autoRefresh = true,
   refreshInterval = 30,
@@ -23,7 +22,7 @@ export const StockPriceDisplay: React.FC<StockPriceDisplayProps> = ({
   const [error, setError] = useState<string | null>(null);
   
   const tauri = useTauri();
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<number>();
 
   // 获取股票信息
   const fetchStockInfo = async () => {

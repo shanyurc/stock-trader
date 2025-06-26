@@ -1,6 +1,7 @@
 use sqlx::{sqlite::SqlitePool, Row};
 use anyhow::Result;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::api::path::app_data_dir;
 use crate::models::Trade;
 
@@ -215,7 +216,8 @@ impl Database {
     }
 }
 
-static mut DATABASE: Option<Database> = None;
+// 使用线程安全的全局数据库实例
+static DATABASE: OnceLock<Arc<Mutex<Database>>> = OnceLock::new();
 
 pub async fn init_database() -> Result<()> {
     println!("开始初始化数据库...");
@@ -227,9 +229,13 @@ pub async fn init_database() -> Result<()> {
             match db.init_tables().await {
                 Ok(_) => {
                     println!("数据库表初始化成功");
-                    unsafe {
-                        DATABASE = Some(db);
+
+                    // 线程安全地设置全局数据库实例
+                    let db_arc = Arc::new(Mutex::new(db));
+                    if DATABASE.set(db_arc).is_err() {
+                        return Err(anyhow::anyhow!("数据库已经初始化"));
                     }
+
                     println!("数据库初始化完成");
                     Ok(())
                 }
@@ -246,8 +252,9 @@ pub async fn init_database() -> Result<()> {
     }
 }
 
-pub fn get_database() -> &'static Database {
-    unsafe {
-        DATABASE.as_ref().expect("数据库未初始化")
-    }
+pub fn get_database() -> Arc<Mutex<Database>> {
+    DATABASE
+        .get()
+        .expect("数据库未初始化")
+        .clone()
 }
