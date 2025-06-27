@@ -1,4 +1,4 @@
-use tauri::command;
+use tauri::{command, api::notification::Notification, Manager};
 use crate::database::get_database;
 use crate::models::{Trade, PriceCalculation};
 use crate::api::PriceCalculator;
@@ -153,4 +153,97 @@ pub async fn get_stock_info(stock_code: String) -> Result<crate::models::StockIn
     StockApi::get_stock_info(&stock_code)
         .await
         .map_err(|e| e.to_string())
+}
+
+// 通知相关命令
+
+#[command]
+pub async fn send_notification(
+    app_handle: tauri::AppHandle,
+    title: String,
+    body: String,
+    icon: Option<String>
+) -> Result<(), String> {
+    let mut notification = Notification::new(&app_handle.config().tauri.bundle.identifier)
+        .title(title)
+        .body(body);
+
+    if let Some(icon_path) = icon {
+        notification = notification.icon(icon_path);
+    }
+
+    notification.show().map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn check_price_alerts_and_notify(
+    app_handle: tauri::AppHandle,
+    buy_step_percentage: f64,
+    annual_return_rate: f64,
+) -> Result<Vec<String>, String> {
+    let db = get_database();
+    let db_lock = db.lock().map_err(|e| format!("数据库锁定失败: {}", e))?;
+
+    // 获取所有交易记录
+    let trades = db_lock.get_all_trades().await.map_err(|e| e.to_string())?;
+    let mut alerts = Vec::new();
+
+    for trade in trades {
+        if let Some(trade_id) = trade.id {
+            // 计算价格目标
+            let days_held = (Utc::now() - trade.buy_time).num_days();
+            let sell_target = PriceCalculator::calculate_sell_target_price(
+                trade.buy_price,
+                annual_return_rate,
+                days_held,
+            );
+            let buy_target = PriceCalculator::calculate_buy_target_price(
+                sell_target,
+                buy_step_percentage,
+            );
+
+            // 获取当前股价
+            if let Ok(current_price) = StockApi::get_stock_price(&trade.stock_code).await {
+                let price_reached = PriceCalculator::check_price_target(
+                    current_price,
+                    sell_target,
+                    buy_target,
+                );
+
+                match price_reached.as_str() {
+                    "sell" => {
+                        let message = format!(
+                            "{}({}) 已达到卖出目标价格 ¥{:.2}，当前价格 ¥{:.2}",
+                            trade.stock_name, trade.stock_code, sell_target, current_price
+                        );
+
+                        // 发送通知
+                        let _ = Notification::new(&app_handle.config().tauri.bundle.identifier)
+                            .title("🔔 卖出提醒")
+                            .body(&message)
+                            .show();
+
+                        alerts.push(message);
+                    }
+                    "buy" => {
+                        let message = format!(
+                            "{}({}) 已达到买入目标价格 ¥{:.2}，当前价格 ¥{:.2}",
+                            trade.stock_name, trade.stock_code, buy_target, current_price
+                        );
+
+                        // 发送通知
+                        let _ = Notification::new(&app_handle.config().tauri.bundle.identifier)
+                            .title("🔔 买入提醒")
+                            .body(&message)
+                            .show();
+
+                        alerts.push(message);
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    Ok(alerts)
 }

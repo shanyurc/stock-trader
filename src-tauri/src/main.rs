@@ -29,7 +29,9 @@ fn main() {
             commands::get_stock_info,
             commands::calculate_price_targets,
             commands::get_setting,
-            commands::set_setting
+            commands::set_setting,
+            commands::send_notification,
+            commands::check_price_alerts_and_notify
         ])
         .setup(|_app| {
             // 初始化数据库

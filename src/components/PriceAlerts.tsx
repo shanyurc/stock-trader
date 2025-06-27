@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trade, Settings } from '../types';
 import { PriceCalculationService } from '../services/priceCalculationService';
+import { NotificationService } from '../services/notificationService';
 import { useTauri } from '../hooks/useTauri';
 
 interface PriceAlertsProps {
@@ -17,9 +18,29 @@ export const PriceAlerts: React.FC<PriceAlertsProps> = ({
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
-  
+  const [isMonitoring, setIsMonitoring] = useState(false);
+
   const tauri = useTauri();
   const calculationService = new PriceCalculationService(settings);
+  const notificationServiceRef = useRef<NotificationService | null>(null);
+
+  // 初始化通知服务
+  useEffect(() => {
+    notificationServiceRef.current = new NotificationService(settings);
+    return () => {
+      // 组件卸载时停止监控
+      if (notificationServiceRef.current) {
+        notificationServiceRef.current.stopPriceMonitoring();
+      }
+    };
+  }, []);
+
+  // 更新通知服务设置
+  useEffect(() => {
+    if (notificationServiceRef.current) {
+      notificationServiceRef.current.updateSettings(settings);
+    }
+  }, [settings]);
 
   // 检查价格提醒
   const checkPriceAlerts = async () => {
@@ -97,6 +118,27 @@ export const PriceAlerts: React.FC<PriceAlertsProps> = ({
     return alertType === 'sell' ? 'alert-sell' : 'alert-buy';
   };
 
+  // 监控控制功能
+  const startMonitoring = () => {
+    if (notificationServiceRef.current && trades.length > 0) {
+      notificationServiceRef.current.startPriceMonitoring(trades, 5); // 每5分钟检查一次
+      setIsMonitoring(true);
+    }
+  };
+
+  const stopMonitoring = () => {
+    if (notificationServiceRef.current) {
+      notificationServiceRef.current.stopPriceMonitoring();
+      setIsMonitoring(false);
+    }
+  };
+
+  const testNotification = async () => {
+    if (notificationServiceRef.current) {
+      await notificationServiceRef.current.testNotification();
+    }
+  };
+
   return (
     <div className="price-alerts">
       <div className="alerts-header">
@@ -107,14 +149,41 @@ export const PriceAlerts: React.FC<PriceAlertsProps> = ({
               最后更新: {formatTime(lastUpdateTime)}
             </span>
           )}
-          <button
-            onClick={checkPriceAlerts}
-            className="btn-refresh"
-            disabled={isLoading}
-            title="手动刷新"
-          >
-            {isLoading ? '⟳' : '🔄'}
-          </button>
+          <div className="header-actions">
+            {isMonitoring ? (
+              <button
+                onClick={stopMonitoring}
+                className="btn-stop-monitoring"
+                title="停止价格监控"
+              >
+                🔕 停止监控
+              </button>
+            ) : (
+              <button
+                onClick={startMonitoring}
+                className="btn-start-monitoring"
+                title="启动价格监控"
+                disabled={trades.length === 0 || !settings.notificationEnabled}
+              >
+                🔔 启动监控
+              </button>
+            )}
+            <button
+              onClick={testNotification}
+              className="btn-test-notification"
+              title="测试通知"
+            >
+              🧪 测试
+            </button>
+            <button
+              onClick={checkPriceAlerts}
+              className="btn-refresh"
+              disabled={isLoading}
+              title="手动刷新"
+            >
+              {isLoading ? '⟳' : '🔄'}
+            </button>
+          </div>
         </div>
       </div>
 

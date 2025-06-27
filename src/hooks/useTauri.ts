@@ -192,6 +192,39 @@ export const useTauri = () => {
     return invoke('set_setting', { key, value });
   };
 
+  // 通知相关命令
+  const sendNotification = async (title: string, body: string, icon?: string): Promise<void> => {
+    if (!isTauri()) {
+      // 在网页模式下使用浏览器通知API
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification(title, { body, icon });
+        } else if (Notification.permission !== 'denied') {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            new Notification(title, { body, icon });
+          }
+        }
+      }
+      return Promise.resolve();
+    }
+    return invoke('send_notification', { title, body, icon });
+  };
+
+  const checkPriceAlertsAndNotify = async (
+    buyStepPercentage: number,
+    annualReturnRate: number
+  ): Promise<string[]> => {
+    if (!isTauri()) {
+      // 在网页模式下模拟价格检查和通知
+      return Promise.resolve([]);
+    }
+    return invoke<string[]>('check_price_alerts_and_notify', {
+      buyStepPercentage,
+      annualReturnRate,
+    });
+  };
+
   // 问候命令（测试用）
   const greet = async (name: string): Promise<string> => {
     if (!isTauri()) {
@@ -219,6 +252,10 @@ export const useTauri = () => {
     // 设置
     getSetting,
     setSetting,
+
+    // 通知
+    sendNotification,
+    checkPriceAlertsAndNotify,
 
     // 测试
     greet,
