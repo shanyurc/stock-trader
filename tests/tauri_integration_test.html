@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tauri集成测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        .warning {
+            border-left-color: #ff9800;
+        }
+        .button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        #console {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Tauri集成测试</h1>
+        
+        <div class="test-section">
+            <h2>环境检测</h2>
+            <div id="environmentStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>测试控制</h2>
+            <button class="button" onclick="runAllIntegrationTests()">运行所有集成测试</button>
+            <button class="button" onclick="testDatabaseOperations()">测试数据库操作</button>
+            <button class="button" onclick="testStockOperations()">测试股票操作</button>
+            <button class="button" onclick="testCalculations()">测试计算功能</button>
+            <button class="button" onclick="clearConsole()">清空控制台</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTests">0</div>
+                <div>总测试数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="passedTests">0</div>
+                <div>通过</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="failedTests">0</div>
+                <div>失败</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="successRate">0%</div>
+                <div>成功率</div>
+            </div>
+        </div>
+
+        <div id="console"></div>
+    </div>
+
+    <script>
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+            console.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('totalTests').textContent = totalTests;
+            document.getElementById('passedTests').textContent = passedTests;
+            document.getElementById('failedTests').textContent = failedTests;
+            const rate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+            document.getElementById('successRate').textContent = rate + '%';
+        }
+
+        function clearConsole() {
+            document.getElementById('console').textContent = '';
+            totalTests = 0;
+            passedTests = 0;
+            failedTests = 0;
+            updateStats();
+        }
+
+        async function checkEnvironment() {
+            const envStatus = document.getElementById('environmentStatus');
+            
+            if (typeof window.__TAURI__ !== 'undefined') {
+                envStatus.innerHTML = '<div class="test-result">✅ 运行在Tauri环境中</div>';
+                log('检测到Tauri环境', 'success');
+                
+                // 检查可用的API
+                if (window.__TAURI__.tauri && window.__TAURI__.tauri.invoke) {
+                    envStatus.innerHTML += '<div class="test-result">✅ Tauri invoke API可用</div>';
+                    log('Tauri invoke API可用', 'success');
+                } else {
+                    envStatus.innerHTML += '<div class="test-result error">❌ Tauri invoke API不可用</div>';
+                    log('Tauri invoke API不可用', 'error');
+                }
+                
+                return true;
+            } else {
+                envStatus.innerHTML = '<div class="test-result warning">⚠️ 运行在Web环境中，无法进行真实的Tauri测试</div>';
+                log('未检测到Tauri环境，将使用模拟测试', 'warning');
+                return false;
+            }
+        }
+
+        async function invoke(command, args = {}) {
+            if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.tauri) {
+                return await window.__TAURI__.tauri.invoke(command, args);
+            } else {
+                // 模拟响应
+                throw new Error('Tauri环境不可用');
+            }
+        }
+
+        async function testDatabaseOperations() {
+            log('🧪 开始测试数据库操作...', 'info');
+            
+            try {
+                // 测试获取所有交易记录
+                totalTests++;
+                const trades = await invoke('get_all_trades');
+                log(`获取交易记录成功，共 ${trades.length} 条`, 'success');
+                passedTests++;
+                
+                // 测试创建交易记录
+                totalTests++;
+                const newTrade = {
+                    stockCode: '000001',
+                    stockName: '平安银行',
+                    buyPrice: 12.50,
+                    buyTime: new Date().toISOString(),
+                    quantity: 1000,
+                    notes: 'Tauri集成测试记录'
+                };
+                
+                const tradeId = await invoke('create_trade', { trade: newTrade });
+                log(`创建交易记录成功，ID: ${tradeId}`, 'success');
+                passedTests++;
+                
+                // 测试获取设置
+                totalTests++;
+                const setting = await invoke('get_setting', { key: 'buy_step_percentage' });
+                log(`获取设置成功: buy_step_percentage = ${setting}`, 'success');
+                passedTests++;
+                
+            } catch (error) {
+                log(`数据库操作测试失败: ${error.message}`, 'error');
+                failedTests++;
+            }
+            
+            updateStats();
+        }
+
+        async function testStockOperations() {
+            log('🧪 开始测试股票操作...', 'info');
+            
+            try {
+                // 测试股票代码验证
+                totalTests++;
+                const isValid = await invoke('validate_stock_code', { stockCode: '000001' });
+                log(`股票代码验证: 000001 -> ${isValid ? '有效' : '无效'}`, 'success');
+                passedTests++;
+                
+                // 测试获取股票价格
+                totalTests++;
+                const priceInfo = await invoke('get_stock_price', { stockCode: '000001' });
+                log(`获取股票价格成功: ${JSON.stringify(priceInfo)}`, 'success');
+                passedTests++;
+                
+                // 测试搜索股票
+                totalTests++;
+                const searchResults = await invoke('search_stocks', { query: '平安' });
+                log(`搜索股票成功，找到 ${searchResults.length} 个结果`, 'success');
+                passedTests++;
+                
+            } catch (error) {
+                log(`股票操作测试失败: ${error.message}`, 'error');
+                failedTests++;
+            }
+            
+            updateStats();
+        }
+
+        async function testCalculations() {
+            log('🧪 开始测试计算功能...', 'info');
+            
+            try {
+                // 测试价格目标计算
+                totalTests++;
+                const calculation = await invoke('calculate_price_targets', {
+                    tradeId: 1,
+                    buyStepPercentage: 0.05,
+                    annualReturnRate: 0.20
+                });
+                log(`价格目标计算成功: ${JSON.stringify(calculation)}`, 'success');
+                passedTests++;
+                
+                // 测试价格提醒检查
+                totalTests++;
+                const alerts = await invoke('check_price_alerts_and_notify', {
+                    buyStepPercentage: 0.05,
+                    annualReturnRate: 0.20
+                });
+                log(`价格提醒检查成功，返回 ${alerts.length} 个提醒`, 'success');
+                passedTests++;
+                
+            } catch (error) {
+                log(`计算功能测试失败: ${error.message}`, 'error');
+                failedTests++;
+            }
+            
+            updateStats();
+        }
+
+        async function runAllIntegrationTests() {
+            clearConsole();
+            log('🚀 开始运行Tauri集成测试套件...', 'info');
+            log('=' .repeat(50), 'info');
+            
+            const isTauriEnv = await checkEnvironment();
+            
+            if (!isTauriEnv) {
+                log('⚠️ 无法在非Tauri环境中运行集成测试', 'warning');
+                return;
+            }
+            
+            const startTime = Date.now();
+            
+            await testDatabaseOperations();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testStockOperations();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCalculations();
+            
+            const endTime = Date.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            
+            log('=' .repeat(50), 'info');
+            log('📊 Tauri集成测试报告', 'info');
+            log('=' .repeat(50), 'info');
+            log(`总测试数量: ${totalTests}`, 'info');
+            log(`通过测试: ${passedTests} (${Math.round((passedTests / totalTests) * 100)}%)`, 'success');
+            log(`失败测试: ${failedTests} (${Math.round((failedTests / totalTests) * 100)}%)`, failedTests > 0 ? 'error' : 'info');
+            log(`总耗时: ${duration} 秒`, 'info');
+            
+            if (failedTests === 0) {
+                log('🎉 所有Tauri集成测试通过！', 'success');
+            } else {
+                log(`⚠️ 发现 ${failedTests} 个问题需要修复`, 'warning');
+            }
+        }
+
+        // 页面加载时检查环境
+        document.addEventListener('DOMContentLoaded', async function() {
+            await checkEnvironment();
+            log('Tauri集成测试页面已准备就绪', 'info');
+        });
+    </script>
+</body>
+</html>
