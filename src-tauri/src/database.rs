@@ -1,7 +1,8 @@
 use sqlx::{sqlite::SqlitePool, Row};
 use anyhow::Result;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
+use tokio::sync::Mutex;
 use tauri::api::path::app_data_dir;
 use crate::models::Trade;
 
